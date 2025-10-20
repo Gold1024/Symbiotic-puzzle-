@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Symbitc Quiz — Sliding Puzzle</title>
+<style>
+  :root{
+    --bg:#0b1220;
+    --panel:#071226;
+    --muted:#9fb0c4;
+    --accent:#00c2d1;
+    --glass: rgba(255,255,255,0.03);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+    background:linear-gradient(180deg,#041023 0%, #071a2a 100%);
+    color:#e7f0f8;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:22px;
+  }
+
+  .wrap{
+    width:100%;
+    max-width:1060px;
+    display:grid;
+    grid-template-columns:360px 1fr;
+    gap:18px;
+    align-items:start;
+  }
+
+  .card{
+    background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));
+    border-radius:12px;
+    padding:14px;
+    box-shadow: 0 8px 30px rgba(3,8,20,0.6);
+  }
+
+  /* left */
+  .hdr{display:flex;gap:12px;align-items:center}
+  .thumb{width:54px;height:54px;border-radius:8px;object-fit:cover;border:1px solid rgba(255,255,255,0.03)}
+  h1{font-size:18px;margin:0}
+  .muted{color:var(--muted);font-size:13px;margin-top:4px}
+
+  label{display:block;color:var(--muted);font-size:13px;margin:8px 0 6px}
+
+  select{
+    width:100%;
+    padding:9px;
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,0.04);
+    background:var(--glass);
+    color:inherit;
+    font-size:14px;
+  }
+
+  .btn{
+    padding:9px 12px;border-radius:10px;border:none;background:var(--accent);color:#02262a;font-weight:700;cursor:pointer;
+    box-shadow:0 6px 18px rgba(0,194,209,0.12);
+  }
+  .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);font-weight:600}
+
+  .controls{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+  .row{display:flex;gap:8px}
+  .stats{display:flex;gap:8px;margin-top:10px}
+  .stat{background:rgba(255,255,255,0.02);padding:8px 10px;border-radius:10px;color:var(--muted);font-size:13px}
+
+  /* board */
+  .board-area{display:flex;flex-direction:column;gap:12px}
+  .board-top{display:flex;justify-content:space-between;align-items:center}
+  .board{
+    width:100%;
+    max-width:700px;
+    aspect-ratio:1/1;
+    background:#071020;
+    border-radius:10px;
+    overflow:hidden;
+    position:relative;
+    display:grid;
+    touch-action:none;
+    user-select:none;
+  }
+
+  .tile{
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:16px;
+    border:1px solid rgba(0,0,0,0.36);
+    cursor:pointer;
+    transition:transform .12s linear;
+  }
+  .tile.blank{background:transparent;border:none;cursor:default}
+  .overlay{
+    position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,rgba(2,6,23,0.65),rgba(2,6,23,0.85));
+    z-index:20;border-radius:10px;padding:20px;text-align:center;
+  }
+  .overlay.show{display:flex;flex-direction:column;gap:10px}
+  .hint-img{
+    position:absolute;inset:0;border-radius:10px;object-fit:cover;z-index:15;opacity:0;transition:opacity .12s;
+  }
+
+  .controls-row{display:flex;gap:8px;flex-wrap:wrap}
+
+  footer.small{color:var(--muted);font-size:13px;text-align:right;margin-top:6px}
+
+  @media (max-width:980px){
+    .wrap{grid-template-columns:1fr;max-width:920px}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="hdr">
+        <!-- Change the image URL below to change the default image used in the puzzle -->
+        <img id="previewThumb" class="thumb" src="https://upload.wikimedia.org/wikipedia/commons/6/6a/JavaScript-logo.png" alt="logo">
+        <div>
+          <h1>Symbitc Quiz</h1>
+          <div class="muted">Sliding puzzle — default image only (no upload)</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div>
+          <label for="gridSize">Grid size</label>
+          <select id="gridSize">
+            <option value="3">3 × 3</option>
+            <option value="4" selected>4 × 4</option>
+            <option value="5">5 × 5</option>
+            <option value="6">6 × 6</option>
+          </select>
+        </div>
+
+        <div class="controls-row">
+          <button id="applyBtn" class="btn">Apply & Start</button>
+          <button id="shuffleBtn" class="btn secondary">Shuffle</button>
+          <button id="solveBtn" class="btn secondary">Show Solution</button>
+        </div>
+
+        <div class="stats">
+          <div class="stat">Moves: <span id="moves">0</span></div>
+          <div class="stat">Time: <span id="timer">00:00</span></div>
+          <div class="stat">Status: <span id="status">Idle</span></div>
+        </div>
+
+        <div class="muted" style="font-size:13px">
+          Controls: tap tiles next to blank. Arrow keys move the blank. Shuffle always creates solvable state.
+        </div>
+      </div>
+    </div>
+
+    <div class="board-area">
+      <div class="card" style="padding:12px;">
+        <div class="board-top">
+          <div>
+            <div style="font-size:13px;color:var(--muted)">Puzzle</div>
+            <div style="font-weight:700">Sliding Logo Puzzle</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button id="hintBtn" class="btn secondary">Hint</button>
+            <button id="downloadBtn" class="btn secondary">Download Image</button>
+          </div>
+        </div>
+
+        <div id="board" class="board" style="margin-top:12px"></div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+          <div style="display:flex;gap:8px">
+            <button id="newBtn" class="btn">New Game</button>
+            <button id="resetBtn" class="btn secondary">Reset</button>
+          </div>
+          <div class="small muted">Made with ♥ — host on GitHub Pages / Netlify</div>
+        </div>
+
+        <div id="overlay" class="overlay" role="dialog" aria-hidden="true">
+          <h2 id="winMsg">You solved it!</h2>
+          <div id="winStats">Time: 00:00 • Moves: 0</div>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <button id="playAgainBtn" class="btn">Play Again</button>
+            <button id="closeOverlay" class="btn secondary">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:12px;">
+        <h3 style="margin:0 0 8px 0">Deploy</h3>
+        <ol style="color:var(--muted);font-size:13px;margin:6px 0 0 18px">
+          <li>Save this file as <code>index.html</code>.</li>
+          <li>Open locally (double-click) or upload to GitHub Pages / Netlify / Vercel.</li>
+          <li>To change the image, edit the <code>src</code> of <code>#previewThumb</code> near the top of the file.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const boardEl = document.getElementById('board');
+  const gridSizeSel = document.getElementById('gridSize');
+  const applyBtn = document.getElementById('applyBtn');
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  const solveBtn = document.getElementById('solveBtn');
+  const movesEl = document.getElementById('moves');
+  const timerEl = document.getElementById('timer');
+  const statusEl = document.getElementById('status');
+  const overlay = document.getElementById('overlay');
+  const winMsg = document.getElementById('winMsg');
+  const winStats = document.getElementById('winStats');
+  const playAgainBtn = document.getElementById('playAgainBtn');
+  const closeOverlay = document.getElementById('closeOverlay');
+  const newBtn = document.getElementById('newBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const hintBtn = document.getElementById('hintBtn');
+  const previewThumb = document.getElementById('previewThumb');
+  const downloadBtn = document.getElementById('downloadBtn');
+
+  let size = parseInt(gridSizeSel.value,10);
+  let imgSrc = previewThumb.src;
+  let N = size*size;
+  let tiles = [];
+  let solvedOrder = [];
+  let moves = 0;
+  let timerInterval = null;
+  let timeSeconds = 0;
+
+  function fmtTime(s){ return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); }
+  function startTimer(){ stopTimer(); timerInterval = setInterval(()=>{ timeSeconds++; timerEl.textContent = fmtTime(timeSeconds); },1000); statusEl.textContent = 'Playing'; }
+  function stopTimer(){ if(timerInterval){ clearInterval(timerInterval); timerInterval=null; } }
+
+  function createSolved(){ size = parseInt(gridSizeSel.value,10); N = size*size; solvedOrder = Array.from({length:N},(_,i)=>i); }
+  function initBoard(resetTime=true){ createSolved(); tiles = solvedOrder.slice(); moves = 0; movesEl.textContent = 0; if(resetTime){ timeSeconds = 0; timerEl.textContent = fmtTime(0); stopTimer(); } statusEl.textContent = 'Idle'; render(); }
+  function render(){ boardEl.innerHTML = ''; boardEl.style.gridTemplateColumns = `repeat(${size},1fr)`; for(let pos=0; pos<N; pos++){ const t = tiles[pos]; const div = document.createElement('div'); div.className = 'tile'; div.dataset.pos = pos; div.dataset.tile = t; if(t === N-1){ div.classList.add('blank'); } else { const r = Math.floor(t/size), c = t % size; const px = (c/(size-1))*100; const py = (r/(size-1))*100; div.style.backgroundImage = `url("${imgSrc}")`; div.style.backgroundSize = `${size*100}% ${size*100}%`; div.style.backgroundPosition = `${px}% ${py}%`; } div.addEventListener('click', onTileClick); div.addEventListener('touchstart', onTileClick, {passive:true}); boardEl.appendChild(div);} }
+
+  function areAdj(a,b){ const ax=a%size, ay=Math.floor(a/size), bx=b%size, by=Math.floor(b/size); return Math.abs(ax-bx)+Math.abs(ay-by)===1; }
+  function onTileClick(e){ const pos = Number(e.currentTarget.dataset.pos); attemptMove(pos); }
+  function attemptMove(pos){ const blankPos = tiles.indexOf(N-1); if(areAdj(pos, blankPos)){ [tiles[pos], tiles[blankPos]] = [tiles[blankPos], tiles[pos]]; moves++; movesEl.textContent = moves; render(); if(moves===1) startTimer(); if(checkSolved()){ stopTimer(); statusEl.textContent='Solved'; setTimeout(()=> showWin(),200); } } }
+  function checkSolved(){ for(let i=0;i<N;i++) if(tiles[i]!==solvedOrder[i]) return false; return true; }
+  function showWin(){ overlay.classList.add('show'); overlay.setAttribute('aria-hidden','false'); winMsg.textContent='You solved it!'; winStats.textContent = `Time: ${fmtTime(timeSeconds)} • Moves: ${moves}`; }
+  function hideWin(){ overlay.classList.remove('show'); overlay.setAttribute('aria-hidden','true'); }
+
+  function shuffle(count){
+    tiles = solvedOrder.slice();
+    let blank = N-1;
+    const dirs = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}];
+    for(let i=0;i<count;i++){
+      const bx = blank%size, by = Math.floor(blank/size);
+      const cands = [];
+      dirs.forEach(d=>{ const nx=bx+d.dx, ny=by+d.dy; if(nx>=0 && nx<size && ny>=0 && ny<size) cands.push(ny*size+nx); });
+      const pick = cands[Math.floor(Math.random()*cands.length)];
+      [tiles[blank], tiles[pick]] = [tiles[pick], tiles[blank]];
+      blank = pick;
+    }
+    moves = 0; movesEl.textContent = moves;
+    timeSeconds = 0; timerEl.textContent = fmtTime(0);
+    render();
+    statusEl.textContent = 'Playing';
+    startTimer();
+  }
+
+  document.addEventListener('keydown',(e)=>{
+    const blank = tiles.indexOf(N-1), x = blank%size, y = Math.floor(blank/size);
+    let target = null;
+    if(e.key==='ArrowUp' && y+1<size) target=(y+1)*size+x;
+    if(e.key==='ArrowDown' && y-1>=0) target=(y-1)*size+x;
+    if(e.key==='ArrowLeft' && x+1<size) target=y*size+(x+1);
+    if(e.key==='ArrowRight' && x-1>=0) target=y*size+(x-1);
+    if(target!==null){ attemptMove(target); e.preventDefault(); }
+  });
+
+  let hintTimer = null;
+  hintBtn.addEventListener('click', ()=>{
+    if(boardEl.querySelector('.hint-img')) boardEl.querySelector('.hint-img').remove();
+    const img = document.createElement('img'); img.src = imgSrc; img.className='hint-img'; boardEl.appendChild(img);
+    requestAnimationFrame(()=> img.style.opacity='1');
+    if(hintTimer) clearTimeout(hintTimer);
+    hintTimer = setTimeout(()=>{ img.style.opacity='0'; setTimeout(()=> img.remove(),160); },1200);
+  });
+
+  applyBtn.addEventListener('click', ()=>{ initBoard(); shuffle(Math.max(80, size*size*30)); });
+  shuffleBtn.addEventListener('click', ()=> shuffle(Math.max(60, size*size*25)));
+  solveBtn.addEventListener('click', ()=>{ tiles = solvedOrder.slice(); render(); stopTimer(); moves = 0; movesEl.textContent = moves; statusEl.textContent='Solved'; });
+
+  newBtn.addEventListener('click', ()=>{ initBoard(); shuffle(Math.max(90, size*size*35)); });
+  resetBtn.addEventListener('click', ()=> initBoard());
+  playAgainBtn.addEventListener('click', ()=>{ hideWin(); shuffle(Math.max(120, size*size*40)); });
+  closeOverlay.addEventListener('click', hideWin);
+  downloadBtn.addEventListener('click', ()=>{ const a=document.createElement('a'); a.href=imgSrc; a.download='puzzle-image'; document.body.appendChild(a); a.click(); a.remove(); });
+
+  // initial
+  imgSrc = previewThumb.src;
+  initBoard();
+
+})();
+</script>
+</body>
+</html>

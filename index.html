@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symbiotic Logo Puzzle</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "game": "./game.js"
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Symbiotic Logo Puzzle</h1>
+    <div id="game-container">
+        
+        <div id="mode-selection">
+            <h2>Select Difficulty:</h2>
+            <button id="mode-easy" data-grid-size="3" class="active">Easy (3x3)</button>
+            <button id="mode-hard" data-grid-size="4">Hard (4x4)</button>
+        </div>
+        
+        <div id="puzzle-info">
+            <div id="move-count">Moves: 0</div>
+            <div id="message"></div>
+        </div>
+        
+        <div id="puzzle-area-wrapper">
+            <div id="puzzle-board">
+                <!-- Tiles will be generated here -->
+            </div>
+            <div id="preview-container" class="hidden">
+                <h2>Target Image</h2>
+                <img id="target-image" alt="Target Logo Image">
+            </div>
+        </div>
+
+        <div id="controls">
+            <button id="shuffle-button">Shuffle</button>
+            <button id="solve-button">Solve</button>
+            <button id="hint-button">Show Hint</button>
+        </div>
+    </div>
+    
+    <footer id="footer">
+        Created by <a id="haziq-name" href="https://x.com/0xGoldx" target="_blank">Haziq</a> | <a href="https://x.com/0xGoldx" target="_blank">Follow me on X</a>
+    </footer>
+    
+    <script type="module">
+        import { initGame } from 'game';
+        
+        // Use the provided image source
+        const IMAGE_SRC = "https://pbs.twimg.com/profile_images/1800211819950157824/ouo922Aq_400x400.png";
+        
+        // Default size
+        let currentGridSize = 3; 
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            const modeButtons = document.querySelectorAll('#mode-selection button');
+            
+            const initialize = (size) => {
+                initGame(IMAGE_SRC, size);
+            };
+            
+            modeButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const newSize = parseInt(button.dataset.gridSize);
+                    if (newSize !== currentGridSize) {
+                        currentGridSize = newSize;
+                        
+                        // Update active class
+                        modeButtons.forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                        
+                        // Restart game with new size
+                        initialize(currentGridSize);
+                    }
+                });
+            });
+
+            // Initial game start
+            initialize(currentGridSize);
+        });
+    </script>
+</body>
+</html>
